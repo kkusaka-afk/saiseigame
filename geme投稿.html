@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameHub Online - 永続Webゲーム投稿・共有プラットフォーム</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            50: '#f0f3ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#1e1b4b',
+                            accent: '#22d3ee',
+                            pink: '#ec4899'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome & Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); }
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+        .glow-effect { box-shadow: 0 0 20px rgba(99, 102, 241, 0.25); }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-cyber-500 selection:text-white" id="appBody">
+
+    <!-- HEADER NAVBAR -->
+    <header class="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            <!-- Logo -->
+            <div class="flex items-center gap-3 cursor-pointer" onclick="app.resetFilters()">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyber-600 via-indigo-500 to-cyber-pink flex items-center justify-center text-white shadow-lg glow-effect">
+                    <i class="fa-solid fa-gamepad text-xl"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-black tracking-tight bg-gradient-to-r from-cyber-accent via-indigo-400 to-cyber-pink bg-clip-text text-transparent">
+                        GameHub Online
+                    </span>
+                    <span id="storageBadge" class="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 ml-2 hidden sm:inline-block">
+                        <i class="fa-solid fa-database mr-1"></i>FIRESTORE
+                    </span>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="flex-1 max-w-md hidden md:block relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="text" id="searchInput" oninput="app.handleSearch()" placeholder="タイトル、作成者、タグでゲームを検索..." 
+                       class="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyber-500 focus:ring-1 focus:ring-cyber-500 transition-all">
+            </div>
+
+            <!-- User Info, Backup & Action -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="app.exportBackup()" title="データバックアップ (Export JSON)" class="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 transition-colors text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-download text-cyber-accent"></i>
+                    <span class="hidden lg:inline">保存</span>
+                </button>
+                <label title="データ復元 (Import JSON)" class="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 transition-colors text-xs cursor-pointer flex items-center gap-1">
+                    <i class="fa-solid fa-upload text-amber-400"></i>
+                    <span class="hidden lg:inline">復元</span>
+                    <input type="file" id="importJsonInput" accept=".json" onchange="app.importBackup(event)" class="hidden">
+                </label>
+                <div id="userBadge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400">
+                    <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <span id="userStatusText">接続中...</span>
+                </div>
+                <button onclick="app.openUploadModal()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-cyber-600 to-indigo-600 hover:from-cyber-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-cyber-600/30 transition-all transform active:scale-95 flex items-center gap-2">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span class="hidden sm:inline">ゲームを投稿</span>
+                    <span class="sm:hidden">投稿</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full space-y-8">
+
+        <!-- FEATURED HERO BANNER -->
+        <section id="heroSection" class="relative rounded-3xl overflow-hidden bg-gradient-to-r from-slate-900 via-cyber-900 to-slate-950 border border-slate-800 p-6 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl">
+            <div class="space-y-4 max-w-xl z-10">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyber-500/10 border border-cyber-500/20 text-cyber-accent text-xs font-semibold">
+                    <i class="fa-solid fa-bolt text-amber-400"></i> 本日おすすめのピックアップ
+                </div>
+                <h1 id="heroTitle" class="text-2xl sm:text-4xl font-black tracking-tight text-white leading-tight">
+                    読み込み中...
+                </h1>
+                <p id="heroDesc" class="text-slate-300 text-xs sm:text-sm line-clamp-3 leading-relaxed">
+                    自作Webゲームを投稿して世界中に公開！クラウドデータベースで永久保存されます。
+                </p>
+                <div class="flex items-center gap-4 pt-2">
+                    <button id="heroPlayBtn" class="px-6 py-3 rounded-xl bg-cyber-500 hover:bg-cyber-600 text-white font-bold text-sm shadow-xl shadow-cyber-500/30 transition-all flex items-center gap-2 transform active:scale-95">
+                        <i class="fa-solid fa-play"></i> 今すぐプレイ
+                    </button>
+                    <span id="heroAuthor" class="text-xs text-slate-400 font-medium">By Anonymous</span>
+                </div>
+            </div>
+            
+            <div id="heroPreview" class="w-full md:w-96 aspect-video rounded-2xl bg-slate-900 border border-slate-700/50 overflow-hidden shadow-2xl relative group cursor-pointer">
+                <div id="heroBg" class="w-full h-full bg-gradient-to-tr from-cyber-600 via-indigo-600 to-cyber-pink flex items-center justify-center text-5xl text-white font-black">
+                    <i class="fa-solid fa-gamepad"></i>
+                </div>
+                <div class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs">
+                    <div class="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white text-xl">
+                        <i class="fa-solid fa-play"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FILTERS & CONTROLS -->
+        <section class="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
+            <!-- Category Selector -->
+            <div class="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-none" id="categoryTags">
+                <!-- Injected dynamically via JS -->
+            </div>
+
+            <!-- Sort Option & Stats -->
+            <div class="flex items-center justify-between w-full md:w-auto gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400">並び替え:</span>
+                    <select id="sortSelect" onchange="app.handleSortChange()" class="bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:border-cyber-500">
+                        <option value="newest">新着順</option>
+                        <option value="popular">人気順（高評価）</option>
+                    </select>
+                </div>
+                <div class="text-xs text-slate-400 font-medium">
+                    作品数: <span id="gameCount" class="text-cyber-accent font-bold">0</span> 件
+                </div>
+            </div>
+        </section>
+
+        <!-- GAME GRID -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="gameGrid">
+            <!-- Game cards injected dynamically -->
+        </section>
+
+        <!-- EMPTY STATE -->
+        <div id="emptyState" class="hidden text-center py-20 space-y-4">
+            <div class="w-20 h-20 rounded-3xl bg-slate-900 border border-slate-800 text-slate-500 mx-auto flex items-center justify-center text-3xl">
+                <i class="fa-solid fa-ghost"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-300">該当するゲームが見つかりませんでした</h3>
+            <p class="text-slate-500 text-sm max-w-md mx-auto">あなたが作ったゲームを投稿して一番最初のクリエイターになりましょう！</p>
+            <button onclick="app.openUploadModal()" class="px-6 py-2.5 rounded-xl bg-cyber-600 hover:bg-cyber-500 text-white font-bold text-sm shadow-lg shadow-cyber-600/30">
+                ゲームを投稿する
+            </button>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-900 bg-slate-950 py-8 text-center text-xs text-slate-500">
+        <p>&copy; 2026 GameHub Online. Global Realtime Web Games Network.</p>
+    </footer>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- PLAY GAME & COMMENTS MODAL -->
+    <div id="playModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-2 sm:p-4 bg-slate-950/90 backdrop-blur-md">
+        <div class="w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[95vh]">
+            <!-- Modal Top Navigation Bar -->
+            <div class="p-4 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3 truncate">
+                    <span id="modalCategory" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyber-500/20 text-cyber-accent border border-cyber-500/30">
+                        ACTION
+                    </span>
+                    <h3 id="modalTitle" class="text-base sm:text-lg font-bold text-white truncate">ゲームタイトル</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="app.restartGame()" title="再読み込み" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                    <button onclick="app.toggleFullscreen()" title="全画面表示" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button onclick="app.closePlayModal()" class="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Game Viewport Frame -->
+            <div class="relative w-full aspect-video bg-black flex items-center justify-center overflow-hidden" id="iframeContainer">
+                <iframe id="gameIframe" class="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+            </div>
+
+            <!-- Modal Info & Interaction Section -->
+            <div class="p-4 sm:p-6 bg-slate-900 border-t border-slate-800 flex-1 overflow-y-auto space-y-5">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2 text-xs text-slate-400">
+                            <span>投稿者: <strong id="modalAuthor" class="text-slate-200">User</strong></span>
+                            <span>•</span>
+                            <span id="modalDate">----/--/--</span>
+                        </div>
+                        <p id="modalDesc" class="text-sm text-slate-300 leading-relaxed">ゲームの説明文がここに表示されます。</p>
+                    </div>
+                    <button id="modalLikeBtn" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 border border-slate-700 transition-all shrink-0">
+                        <i class="fa-solid fa-heart text-rose-500"></i>
+                        <span id="modalLikes">0</span> 高評価
+                    </button>
+                </div>
+
+                <!-- Controls & Instructions -->
+                <div id="modalControlsBox" class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs text-slate-400">
+                    <span class="font-bold text-slate-300"><i class="fa-solid fa-keyboard mr-1.5"></i>操作方法:</span>
+                    <span id="modalControlsText" class="ml-1">矢印キー、マウスクリック等で操作できます。</span>
+                </div>
+
+                <!-- Realtime Comments Section -->
+                <div class="border-t border-slate-800/80 pt-4 space-y-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                        <i class="fa-solid fa-comments text-cyber-accent"></i> リアルタイムコメント・感想
+                    </h4>
+                    <div class="flex gap-2">
+                        <input type="text" id="commentInput" placeholder="感想やクリアスコアを入力してみよう..." class="flex-1 bg-slate-950 border border-slate-800 text-xs rounded-xl px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-cyber-500">
+                        <button onclick="app.postComment()" class="px-5 py-2.5 bg-cyber-600 hover:bg-cyber-500 text-white text-xs font-bold rounded-xl transition-all shadow-md">
+                            投稿
+                        </button>
+                    </div>
+                    <div id="commentsList" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        <!-- Injected comments list -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPLOAD & TEST GAME MODAL -->
+    <div id="uploadModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
+        <div class="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl my-8">
+            <!-- Modal Header -->
+            <div class="p-6 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-cyber-500/20 text-cyber-accent flex items-center justify-center text-lg border border-cyber-500/30">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">ゲームを世界に公開・投稿</h3>
+                        <p class="text-xs text-slate-400">1ファイルのHTML/CSS/JSコードを直接入力またはドラッグ＆ドロップ</p>
+                    </div>
+                </div>
+                <button onclick="app.closeUploadModal()" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form -->
+            <form id="uploadForm" onsubmit="app.handleUploadSubmit(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">ゲームタイトル *</label>
+                    <input type="text" id="inputTitle" required placeholder="例: ネオン・ランナー 2026" 
+                           class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-cyber-500">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">ジャンル *</label>
+                        <select id="inputCategory" required class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-cyber-500">
+                            <option value="Action">アクション</option>
+                            <option value="Puzzle">パズル</option>
+                            <option value="Arcade">アーケード</option>
+                            <option value="Shooter">シューティング</option>
+                            <option value="RPG">RPG</option>
+                            <option value="Other">その他</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">投稿者・作者名 *</label>
+                        <input type="text" id="inputAuthor" required placeholder="例: Taro_Dev" 
+                               class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-cyber-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">ゲーム概要・説明</label>
+                        <textarea id="inputDesc" rows="2" placeholder="ゲームの内容やストーリーなどを入力..." 
+                                  class="w-full px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-xs focus:outline-none focus:border-cyber-500"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">操作方法ガイド</label>
+                        <textarea id="inputControls" rows="2" placeholder="例: 矢印キーで移動, スペースキーでジャンプ..." 
+                                  class="w-full px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-xs focus:outline-none focus:border-cyber-500"></textarea>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">サムネイルグラデーション選択</label>
+                    <div class="grid grid-cols-5 gap-2" id="gradientSelector">
+                        <!-- Gradient presets injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Drag Drop & Code Editor -->
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="text-xs font-bold uppercase tracking-wider text-slate-400">HTMLソースコード (HTML+CSS+JS 1ファイル) *</label>
+                        <button type="button" onclick="app.previewTestGame()" class="text-xs text-cyber-accent hover:underline flex items-center gap-1 font-semibold">
+                            <i class="fa-solid fa-play"></i> ライブテスト動作確認
+                        </button>
+                    </div>
+                    <div id="dropZone" ondragover="app.handleDragOver(event)" ondragleave="app.handleDragLeave(event)" ondrop="app.handleFileDrop(event)" 
+                         class="border-2 border-dashed border-slate-800 rounded-xl p-3 bg-slate-950/50 text-center transition-colors mb-2 cursor-pointer hover:border-slate-700">
+                        <p class="text-xs text-slate-400">
+                            <i class="fa-solid fa-file-code text-cyber-accent text-lg mb-1 block"></i>
+                            <span class="font-bold text-slate-300">.html ファイルを直接ドロップ</span>、または下の入力欄にコードを貼り付け
+                        </p>
+                    </div>
+                    <textarea id="inputCode" required rows="6" placeholder="<!DOCTYPE html>&#10;<html>&#10;  <head><style>...</style></head>&#10;  <body><canvas id='c'></canvas><script>...</script></body>&#10;</html>" 
+                              class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 font-mono text-xs focus:outline-none focus:border-cyber-500 leading-relaxed"></textarea>
+                </div>
+
+                <!-- Test Preview Box Area -->
+                <div id="testPreviewWrapper" class="hidden border border-cyber-500/40 rounded-xl overflow-hidden bg-black p-2 relative">
+                    <div class="flex justify-between items-center px-2 py-1 text-xs text-cyber-accent font-bold border-b border-slate-800 mb-2">
+                        <span><i class="fa-solid fa-flask mr-1"></i>ライブプレビュー画面</span>
+                        <button type="button" onclick="document.getElementById('testPreviewWrapper').classList.add('hidden')" class="text-slate-400 hover:text-white">閉じる</button>
+                    </div>
+                    <iframe id="testIframe" class="w-full aspect-video border-0 bg-slate-900 rounded-lg" sandbox="allow-scripts allow-same-origin"></iframe>
+                </div>
+
+                <!-- Form Footer -->
+                <div class="pt-2 flex justify-end gap-3">
+                    <button type="button" onclick="app.closeUploadModal()" class="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-semibold text-sm hover:bg-slate-700">
+                        キャンセル
+                    </button>
+                    <button type="submit" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyber-600 to-indigo-600 text-white font-bold text-sm shadow-lg shadow-cyber-600/30 hover:from-cyber-500 hover:to-indigo-500 flex items-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>ゲームを保存・投稿</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FIREBASE PLATFORM SCRIPT -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, increment, arrayUnion, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables provided by environment or default fallback
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'gamehub-online-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "demo-key",
+            authDomain: "demo.firebaseapp.com",
+            projectId: "demo-project",
+            storageBucket: "demo.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:demo"
+        };
+
+        let fbApp, auth, db;
+        try {
+            fbApp = initializeApp(firebaseConfig);
+            auth = getAuth(fbApp);
+            db = getFirestore(fbApp);
+        } catch (err) {
+            console.warn("Firebase config not available or initialization failed. Switching to LocalStorage fallback.", err);
+        }
+
+        const GRADIENTS = [
+            'from-cyber-600 via-indigo-600 to-cyber-pink',
+            'from-emerald-600 via-teal-700 to-cyan-800',
+            'from-amber-500 via-orange-600 to-red-600',
+            'from-blue-600 via-cyan-600 to-teal-500',
+            'from-fuchsia-600 via-purple-600 to-rose-600'
+        ];
+
+        const STARTER_GAMES = [
+            {
+                id: 'starter-flappy',
+                title: 'ネオン・フラッピー・ドッジ',
+                category: 'Action',
+                author: 'GameHubStudio',
+                desc: '障害物を避けてハイスコアを目指す！画面タップまたはスペースキーで跳躍！',
+                controls: 'クリック または スペースキーで上昇',
+                gradient: GRADIENTS[0],
+                likes: 18,
+                createdAt: Date.now() - 3600000 * 24,
+                comments: [
+                    { author: 'Player1', text: 'シンプルだけど超ハマる！', date: '10/08 14:00' }
+                ],
+                code: `<!DOCTYPE html><html><head><style>body{margin:0;background:#020617;overflow:hidden;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;color:#fff;}canvas{border:2px solid #6366f1;border-radius:12px;background:#0f172a;}</style></head><body><canvas id="c" width="400" height="500"></canvas><script>const c=document.getElementById('c'),ctx=c.getContext('2d');let bird={y:250,v:0,g:0.35,jump:-6.5},pipes=[],score=0,gameOver=false;function jump(){if(gameOver){bird.y=250;bird.v=0;pipes=[];score=0;gameOver=false;loop();return;}bird.v=bird.jump;}window.onpointerdown=jump;window.onkeydown=e=>{if(e.code==='Space')jump();};function spawnPipe(){pipes.push({x:400,top:Math.random()*200+50,passed:false});}setInterval(()=>{if(!gameOver)spawnPipe();},1800);function loop(){if(gameOver)return;bird.v+=bird.g;bird.y+=bird.v;ctx.fillStyle='#0f172a';ctx.fillRect(0,0,400,500);ctx.fillStyle='#38bdf8';ctx.beginPath();ctx.arc(80,bird.y,12,0,Math.PI*2);ctx.fill();pipes.forEach(p=>{p.x-=2.5;ctx.fillStyle='#22c55e';ctx.fillRect(p.x,0,45,p.top);ctx.fillRect(p.x,p.top+120,45,500);if(80>p.x&&80<p.x+45&&(bird.y<p.top||bird.y>p.top+120))gameOver=true;if(!p.passed&&p.x<80){score++;p.passed=true;}});if(bird.y>500||bird.y<0)gameOver=true;ctx.fillStyle='#fff';ctx.font='bold 20px sans-serif';ctx.fillText('SCORE: '+score,20,35);if(gameOver){ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,400,500);ctx.fillStyle='#ef4444';ctx.font='bold 28px sans-serif';ctx.fillText('GAME OVER',120,240);ctx.fillStyle='#fff';ctx.font='16px sans-serif';ctx.fillText('タップしてリスタート',125,280);}else{requestAnimationFrame(loop);}}loop();<\/script></body></html>`
+            },
+            {
+                id: 'starter-breaker',
+                title: 'レトロ・ブロックブレイカー',
+                category: 'Arcade',
+                author: 'RetroKing',
+                desc: '定番のブロックくずし！マウス操作でパドルを動かしてブロックを壊そう。',
+                controls: 'マウス移動でパドル操作',
+                gradient: GRADIENTS[2],
+                likes: 25,
+                createdAt: Date.now() - 3600000 * 12,
+                comments: [],
+                code: `<!DOCTYPE html><html><head><style>body{margin:0;background:#0f172a;overflow:hidden;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;}canvas{border:2px solid #f43f5e;border-radius:12px;background:#020617;}</style></head><body><canvas id="c" width="500" height="400"></canvas><script>const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');let paddle={x:200,w:90},ball={x:250,y:300,dx:3.5,dy:-3.5,r:7},bricks=[],score=0;for(let r=0;r<4;r++){bricks[r]=[];for(let c=0;c<6;c++)bricks[r][c]={x:c*75+28,y:r*25+35,w:65,h:18,a:1};}window.onmousemove=e=>{const rect=canvas.getBoundingClientRect();paddle.x=e.clientX-rect.left-paddle.w/2;};function loop(){ctx.clearRect(0,0,500,400);ctx.fillStyle='#38bdf8';ctx.fillRect(paddle.x,370,paddle.w,12);ball.x+=ball.dx;ball.y+=ball.dy;if(ball.x<0||ball.x>500)ball.dx*=-1;if(ball.y<0)ball.dy*=-1;if(ball.y>370&&ball.x>paddle.x&&ball.x<paddle.x+paddle.w)ball.dy=-Math.abs(ball.dy);if(ball.y>400){ball.x=250;ball.y=200;ball.dy=-3.5;}ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fill();bricks.forEach(row=>row.forEach(b=>{if(b.a){if(ball.x>b.x&&ball.x<b.x+b.w&&ball.y>b.y&&ball.y<b.y+b.h){b.a=0;ball.dy*=-1;score+=10;}ctx.fillStyle='#f43f5e';ctx.fillRect(b.x,b.y,b.w,b.h);}}));ctx.fillStyle='#fff';ctx.font='bold 16px sans-serif';ctx.fillText('Score: '+score,20,25);requestAnimationFrame(loop);}loop();<\/script></body></html>`
+            },
+            {
+                id: 'starter-snake',
+                title: 'サイバー・スネーク・クラシック',
+                category: 'Puzzle',
+                author: 'CyberCoder',
+                desc: 'エサを食べてヘビを大きく成長させよう！壁や自分の体に当たらないように！',
+                controls: '矢印キー(↑↓←→)で移動方向の指定',
+                gradient: GRADIENTS[1],
+                likes: 12,
+                createdAt: Date.now() - 3600000 * 6,
+                comments: [],
+                code: `<!DOCTYPE html><html><head><style>body{margin:0;background:#042f2e;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;color:#5eead4;}canvas{border:2px solid #14b8a6;border-radius:12px;background:#022c22;}</style></head><body><canvas id="c" width="400" height="400"></canvas><script>const c=document.getElementById('c'),ctx=c.getContext('2d'),gs=20,tc=20;let px=10,py=10,gx=15,gy=15,xv=1,yv=0,trail=[],tail=5,score=0;window.onkeydown=e=>{if(e.key==='ArrowLeft'&&xv!==1){xv=-1;yv=0;}if(e.key==='ArrowUp'&&yv!==1){xv=0;yv=-1;}if(e.key==='ArrowRight'&&xv!==-1){xv=1;yv=0;}if(e.key==='ArrowDown'&&yv!==-1){xv=0;yv=1;}};function game(){px+=xv;py+=yv;if(px<0||px>=tc||py<0||py>=tc){px=10;py=10;tail=5;score=0;xv=1;yv=0;}ctx.fillStyle='#022c22';ctx.fillRect(0,0,400,400);ctx.fillStyle='#22d3ee';for(let i=0;i<trail.length;i++){ctx.fillRect(trail[i].x*gs,trail[i].y*gs,gs-2,gs-2);if(trail[i].x===px&&trail[i].y===py&&tail>5){tail=5;score=0;}}trail.push({x:px,y:py});while(trail.length>tail)trail.shift();if(gx===px&&gy===py){tail++;score+=10;gx=Math.floor(Math.random()*tc);gy=Math.floor(Math.random()*tc);}ctx.fillStyle='#f43f5e';ctx.fillRect(gx*gs,gy*gs,gs-2,gs-2);ctx.fillStyle='#fff';ctx.font='16px sans-serif';ctx.fillText('SCORE: '+score,10,25);}setInterval(game,100);<\/script></body></html>`
+            }
+        ];
+
+        class RealtimeGameHub {
+            constructor() {
+                this.currentUser = null;
+                this.games = [];
+                this.currentCategory = 'All';
+                this.searchQuery = '';
+                this.sortBy = 'newest';
+                this.selectedGradient = GRADIENTS[0];
+                this.activeGameId = null;
+                this.isOfflineMode = false;
+
+                this.loadLocalStorageGames();
+                this.initAuthAndFirestore();
+                this.renderCategories();
+                this.renderGradientSelector();
+            }
+
+            // LocalStorage Persistent Cache Layer
+            loadLocalStorageGames() {
+                try {
+                    const localData = localStorage.getItem('gamehub_persistent_games');
+                    if (localData) {
+                        this.games = JSON.parse(localData);
+                    } else {
+                        this.games = [...STARTER_GAMES];
+                        this.saveLocalStorageGames();
+                    }
+                } catch (e) {
+                    console.warn("LocalStorage access failed:", e);
+                    this.games = [...STARTER_GAMES];
+                }
+            }
+
+            saveLocalStorageGames() {
+                try {
+                    localStorage.setItem('gamehub_persistent_games', JSON.stringify(this.games));
+                } catch (e) {
+                    console.warn("LocalStorage save quota exceeded:", e);
+                }
+            }
+
+            async initAuthAndFirestore() {
+                if (!auth || !db) {
+                    this.enableOfflineMode("オフラインモード（LocalStorage）で稼働中");
+                    return;
+                }
+
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (e) {
+                    console.warn('Auth fallback triggered:', e);
+                    this.enableOfflineMode("匿名認証に失敗しました。ローカル保存モードを使用します");
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    this.currentUser = user;
+                    const statusText = document.getElementById('userStatusText');
+                    if (user) {
+                        statusText.innerText = `オンライン: ID-${user.uid.slice(0, 5)}`;
+                        this.listenToPublicGames();
+                    } else {
+                        this.currentUser = { uid: 'guest-' + Math.random().toString(36).substring(2, 7) };
+                        statusText.innerText = `ゲスト接続: ${this.currentUser.uid}`;
+                        this.enableOfflineMode();
+                    }
+                });
+            }
+
+            enableOfflineMode(msg) {
+                this.isOfflineMode = true;
+                if (!this.currentUser) {
+                    this.currentUser = { uid: 'guest-' + Math.random().toString(36).substring(2, 7) };
+                }
+                const statusText = document.getElementById('userStatusText');
+                if (statusText) statusText.innerText = `ローカル保存モード (${this.currentUser.uid.slice(0, 5)})`;
+                
+                const badge = document.getElementById('storageBadge');
+                if (badge) {
+                    badge.innerHTML = '<i class="fa-solid fa-hard-drive mr-1"></i>LOCAL';
+                    badge.className = 'text-[10px] uppercase font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 ml-2 hidden sm:inline-block';
+                }
+
+                if (msg) this.showToast(msg, 'info');
+                this.renderHero();
+                this.renderGrid();
+            }
+
+            listenToPublicGames() {
+                if (this.isOfflineMode || !db) return;
+
+                // Path Rule 1 compliant path
+                const gamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'games');
+
+                onSnapshot(gamesCol, (snapshot) => {
+                    let remoteGames = [];
+                    snapshot.forEach(docSnap => {
+                        const data = docSnap.data();
+                        remoteGames.push({
+                            id: docSnap.id,
+                            ...data,
+                            createdAt: data.createdAt ? (data.createdAt.seconds ? data.createdAt.seconds * 1000 : data.createdAt) : Date.now()
+                        });
+                    });
+
+                    if (remoteGames.length === 0 && snapshot.empty) {
+                        this.seedInitialGamesToFirestore(gamesCol);
+                        return;
+                    }
+
+                    // Merge remote and local games seamlessly so no user games are ever lost
+                    const mergedMap = new Map();
+                    this.games.forEach(g => mergedMap.set(g.id, g));
+                    remoteGames.forEach(g => mergedMap.set(g.id, g));
+
+                    this.games = Array.from(mergedMap.values());
+                    this.saveLocalStorageGames(); // Backup to local storage as well
+
+                    this.renderHero();
+                    this.renderGrid();
+
+                    if (this.activeGameId) {
+                        const active = this.games.find(g => g.id === this.activeGameId);
+                        if (active) this.updateModalDetails(active);
+                    }
+                }, (error) => {
+                    console.error("Firestore sync error, defaulting to local cache:", error);
+                    this.enableOfflineMode("通信エラーが発生しました。ローカル保存に復帰します");
+                });
+            }
+
+            async seedInitialGamesToFirestore(gamesCol) {
+                for (const g of STARTER_GAMES) {
+                    const { id, ...starterData } = g;
+                    try {
+                        const docRef = doc(gamesCol, id);
+                        await setDoc(docRef, {
+                            ...starterData,
+                            createdAt: Date.now()
+                        });
+                    } catch (e) {
+                        console.warn("Seeding failed:", e);
+                    }
+                }
+            }
+
+            showToast(message, type = 'success') {
+                const container = document.getElementById('toastContainer');
+                if (!container) return;
+
+                const toast = document.createElement('div');
+                const bgColor = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-cyber-600';
+                const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-info';
+
+                toast.className = `pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-xl ${bgColor} text-white text-xs font-semibold shadow-2xl transition-all duration-300 transform translate-y-4 opacity-0`;
+                toast.innerHTML = `<i class="fa-solid ${icon} text-sm"></i> <span>${message}</span>`;
+
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.classList.remove('translate-y-4', 'opacity-0');
+                }, 10);
+
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'translate-y-2');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3500);
+            }
+
+            renderCategories() {
+                const categories = ['All', 'Action', 'Puzzle', 'Arcade', 'Shooter', 'RPG', 'Other'];
+                const categoryNames = { 
+                    'All': 'すべて', 'Action': 'アクション', 'Puzzle': 'パズル', 
+                    'Arcade': 'アーケード', 'Shooter': 'シューティング', 'RPG': 'RPG', 'Other': 'その他' 
+                };
+                
+                const container = document.getElementById('categoryTags');
+                container.innerHTML = categories.map(cat => `
+                    <button onclick="app.setCategory('${cat}')" 
+                            class="px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                                this.currentCategory === cat 
+                                ? 'bg-cyber-600 text-white shadow-lg shadow-cyber-600/30' 
+                                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800'
+                            }">
+                        ${categoryNames[cat]}
+                    </button>
+                `).join('');
+            }
+
+            renderGradientSelector() {
+                const container = document.getElementById('gradientSelector');
+                container.innerHTML = GRADIENTS.map((g, idx) => `
+                    <div onclick="app.selectGradient('${g}', this)" 
+                         class="h-9 rounded-xl bg-gradient-to-r ${g} cursor-pointer border-2 ${idx === 0 ? 'border-white' : 'border-transparent'} hover:scale-105 transition-all">
+                    </div>
+                `).join('');
+            }
+
+            selectGradient(grad, el) {
+                this.selectedGradient = grad;
+                document.querySelectorAll('#gradientSelector > div').forEach(d => d.classList.replace('border-white', 'border-transparent'));
+                el.classList.replace('border-transparent', 'border-white');
+            }
+
+            setCategory(cat) {
+                this.currentCategory = cat;
+                this.renderCategories();
+                this.renderGrid();
+            }
+
+            handleSearch() {
+                this.searchQuery = document.getElementById('searchInput').value.toLowerCase();
+                this.renderGrid();
+            }
+
+            handleSortChange() {
+                this.sortBy = document.getElementById('sortSelect').value;
+                this.renderGrid();
+            }
+
+            resetFilters() {
+                this.currentCategory = 'All';
+                this.searchQuery = '';
+                document.getElementById('searchInput').value = '';
+                this.renderCategories();
+                this.renderGrid();
+            }
+
+            renderHero() {
+                if (this.games.length === 0) return;
+                const hero = [...this.games].sort((a,b) => (b.likes||0) - (a.likes||0))[0];
+
+                document.getElementById('heroTitle').innerText = hero.title;
+                document.getElementById('heroDesc').innerText = hero.desc || '説明はありません。';
+                document.getElementById('heroAuthor').innerText = `By ${hero.author || 'Anonymous'}`;
+                
+                const playBtn = document.getElementById('heroPlayBtn');
+                playBtn.onclick = () => this.openPlayModal(hero.id);
+
+                const bg = document.getElementById('heroBg');
+                bg.className = `w-full h-full bg-gradient-to-tr ${hero.gradient || GRADIENTS[0]} flex items-center justify-center text-5xl text-white font-black`;
+                
+                document.getElementById('heroPreview').onclick = () => this.openPlayModal(hero.id);
+            }
+
+            renderGrid() {
+                const grid = document.getElementById('gameGrid');
+                const empty = document.getElementById('emptyState');
+
+                let filtered = this.games.filter(g => {
+                    const matchCategory = this.currentCategory === 'All' || g.category === this.currentCategory;
+                    const matchSearch = (g.title||'').toLowerCase().includes(this.searchQuery) || 
+                                        (g.author||'').toLowerCase().includes(this.searchQuery) ||
+                                        (g.desc||'').toLowerCase().includes(this.searchQuery);
+                    return matchCategory && matchSearch;
+                });
+
+                if (this.sortBy === 'popular') {
+                    filtered.sort((a,b) => (b.likes || 0) - (a.likes || 0));
+                } else {
+                    filtered.sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+                }
+
+                document.getElementById('gameCount').innerText = filtered.length;
+
+                if (filtered.length === 0) {
+                    grid.innerHTML = '';
+                    empty.classList.remove('hidden');
+                    return;
+                }
+                empty.classList.add('hidden');
+
+                grid.innerHTML = filtered.map(game => `
+                    <div class="glass rounded-2xl border border-slate-800/80 overflow-hidden hover:border-cyber-500/50 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between group shadow-xl">
+                        <div>
+                            <div class="relative aspect-video bg-gradient-to-tr ${game.gradient || GRADIENTS[0]} flex items-center justify-center text-4xl text-white font-black overflow-hidden cursor-pointer"
+                                 onclick="app.openPlayModal('${game.id}')">
+                                <i class="fa-solid fa-gamepad opacity-80 group-hover:scale-110 transition-transform"></i>
+                                <span class="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-950/80 backdrop-blur-md text-cyber-accent border border-slate-700/50">
+                                    ${game.category || 'Arcade'}
+                                </span>
+                            </div>
+
+                            <div class="p-5 space-y-2">
+                                <h3 class="font-bold text-base text-slate-100 group-hover:text-cyber-accent transition-colors line-clamp-1 cursor-pointer"
+                                    onclick="app.openPlayModal('${game.id}')">
+                                    ${game.title}
+                                </h3>
+                                <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                                    ${game.desc || '説明はありません。'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="px-5 py-3 border-t border-slate-800/60 bg-slate-950/40 flex items-center justify-between text-xs text-slate-400">
+                            <span class="font-medium text-slate-500 truncate max-w-[100px]">By ${game.author || 'Anon'}</span>
+                            <div class="flex items-center gap-3">
+                                <button onclick="app.likeGame('${game.id}', event)" class="hover:text-rose-400 transition-colors flex items-center gap-1">
+                                    <i class="fa-solid fa-heart text-rose-500"></i> ${game.likes || 0}
+                                </button>
+                                <button onclick="app.openPlayModal('${game.id}')" class="px-3.5 py-1.5 rounded-lg bg-cyber-600 hover:bg-cyber-500 text-white font-bold transition-all shadow-md shadow-cyber-600/20">
+                                    プレイ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            openPlayModal(gameId) {
+                const game = this.games.find(g => g.id === gameId);
+                if (!game) return;
+
+                this.activeGameId = gameId;
+                this.updateModalDetails(game);
+
+                const iframe = document.getElementById('gameIframe');
+                iframe.srcdoc = game.code;
+
+                document.getElementById('playModal').classList.remove('hidden');
+            }
+
+            updateModalDetails(game) {
+                document.getElementById('modalTitle').innerText = game.title;
+                document.getElementById('modalCategory').innerText = game.category || 'Arcade';
+                document.getElementById('modalAuthor').innerText = game.author || 'Anonymous';
+                document.getElementById('modalDesc').innerText = game.desc || '説明なし';
+                document.getElementById('modalLikes').innerText = game.likes || 0;
+                document.getElementById('modalControlsText').innerText = game.controls || '操作方法の指定なし';
+
+                const d = new Date(game.createdAt || Date.now());
+                document.getElementById('modalDate').innerText = `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')}`;
+
+                const likeBtn = document.getElementById('modalLikeBtn');
+                likeBtn.onclick = (e) => this.likeGame(game.id, e);
+
+                const commentsList = document.getElementById('commentsList');
+                const comments = game.comments || [];
+                if (comments.length === 0) {
+                    commentsList.innerHTML = '<p class="text-xs text-slate-500 italic py-2">まだコメントはありません。一番乗りの感想を投稿してみよう！</p>';
+                } else {
+                    commentsList.innerHTML = comments.slice().reverse().map(c => `
+                        <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 text-xs">
+                            <div class="flex justify-between text-[10px] text-slate-400 mb-1">
+                                <strong class="text-cyber-accent">${c.author}</strong>
+                                <span>${c.date || ''}</span>
+                            </div>
+                            <p class="text-slate-200">${c.text}</p>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            closePlayModal() {
+                const iframe = document.getElementById('gameIframe');
+                iframe.srcdoc = ''; 
+                document.getElementById('playModal').classList.add('hidden');
+                this.activeGameId = null;
+            }
+
+            restartGame() {
+                if (!this.activeGameId) return;
+                const game = this.games.find(g => g.id === this.activeGameId);
+                if (game) {
+                    const iframe = document.getElementById('gameIframe');
+                    iframe.srcdoc = game.code;
+                }
+            }
+
+            toggleFullscreen() {
+                const container = document.getElementById('iframeContainer');
+                if (!document.fullscreenElement) {
+                    container.requestFullscreen().catch(() => {});
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+
+            async likeGame(gameId, event) {
+                if (event) event.stopPropagation();
+
+                const game = this.games.find(g => g.id === gameId);
+                if (game) {
+                    game.likes = (game.likes || 0) + 1;
+                    this.saveLocalStorageGames();
+                    this.renderGrid();
+                    if (this.activeGameId === gameId) {
+                        document.getElementById('modalLikes').innerText = game.likes;
+                    }
+                    this.showToast('高評価を追加しました！');
+
+                    if (!this.isOfflineMode && db) {
+                        try {
+                            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
+                            await updateDoc(gameRef, { likes: increment(1) });
+                        } catch (err) {
+                            console.warn("Could not sync like to cloud:", err);
+                        }
+                    }
+                }
+            }
+
+            async postComment() {
+                if (!this.activeGameId) return;
+                const input = document.getElementById('commentInput');
+                const text = input.value.trim();
+                if (!text) return;
+
+                const game = this.games.find(g => g.id === this.activeGameId);
+                if (!game) return;
+
+                const authorName = this.currentUser ? `User-${this.currentUser.uid.slice(0,4)}` : 'Guest';
+                const newComment = {
+                    author: authorName,
+                    text: text,
+                    date: new Date().toLocaleDateString('ja-JP', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
+                };
+
+                if (!game.comments) game.comments = [];
+                game.comments.push(newComment);
+                this.saveLocalStorageGames();
+                this.updateModalDetails(game);
+                input.value = '';
+                this.showToast('コメントを投稿しました！');
+
+                if (!this.isOfflineMode && db) {
+                    try {
+                        const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', this.activeGameId);
+                        await updateDoc(gameRef, { comments: arrayUnion(newComment) });
+                    } catch (err) {
+                        console.warn("Could not sync comment to cloud:", err);
+                    }
+                }
+            }
+
+            openUploadModal() {
+                document.getElementById('uploadModal').classList.remove('hidden');
+            }
+
+            closeUploadModal() {
+                document.getElementById('uploadModal').classList.add('hidden');
+                document.getElementById('testPreviewWrapper').classList.add('hidden');
+                document.getElementById('uploadForm').reset();
+            }
+
+            previewTestGame() {
+                const code = document.getElementById('inputCode').value;
+                if (!code.trim()) return this.showToast('HTMLコードを入力してください', 'error');
+                
+                const wrapper = document.getElementById('testPreviewWrapper');
+                const iframe = document.getElementById('testIframe');
+                iframe.srcdoc = code;
+                wrapper.classList.remove('hidden');
+                this.showToast('プレビュー画面を読み込みました', 'info');
+            }
+
+            handleDragOver(e) {
+                e.preventDefault();
+                document.getElementById('dropZone').classList.add('border-cyber-500', 'bg-cyber-500/10');
+            }
+
+            handleDragLeave(e) {
+                e.preventDefault();
+                document.getElementById('dropZone').classList.remove('border-cyber-500', 'bg-cyber-500/10');
+            }
+
+            handleFileDrop(e) {
+                e.preventDefault();
+                this.handleDragLeave(e);
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    if (file.name.endsWith('.html') || file.name.endsWith('.htm')) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            document.getElementById('inputCode').value = event.target.result;
+                            this.showToast(`ファイル "${file.name}" を読み込みました`);
+                        };
+                        reader.readAsText(file);
+                    } else {
+                        this.showToast('.html ファイルをドロップしてください', 'error');
+                    }
+                }
+            }
+
+            async handleUploadSubmit(e) {
+                e.preventDefault();
+
+                const newGame = {
+                    id: 'game-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+                    title: document.getElementById('inputTitle').value,
+                    category: document.getElementById('inputCategory').value,
+                    author: document.getElementById('inputAuthor').value,
+                    desc: document.getElementById('inputDesc').value,
+                    controls: document.getElementById('inputControls').value,
+                    gradient: this.selectedGradient,
+                    code: document.getElementById('inputCode').value,
+                    likes: 0,
+                    comments: [],
+                    createdAt: Date.now()
+                };
+
+                // Add to local state first to ensure instant response & persistence
+                this.games.unshift(newGame);
+                this.saveLocalStorageGames();
+                this.renderHero();
+                this.renderGrid();
+
+                let targetId = newGame.id;
+
+                if (!this.isOfflineMode && db) {
+                    try {
+                        const gamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'games');
+                        const docRef = doc(gamesCol, newGame.id);
+                        await setDoc(docRef, newGame);
+                        targetId = newGame.id;
+                    } catch (err) {
+                        console.warn("Cloud save failed, retained in LocalStorage:", err);
+                    }
+                }
+
+                this.showToast('ゲームが正常に保存・投稿されました！');
+                this.closeUploadModal();
+                this.openPlayModal(targetId);
+            }
+
+            exportBackup() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.games, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `gamehub_backup_${new Date().toISOString().slice(0,10)}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+                this.showToast('全ゲームデータをJSON形式でバックアップ保存しました');
+            }
+
+            importBackup(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const importedGames = JSON.parse(event.target.result);
+                        if (Array.isArray(importedGames)) {
+                            const mergedMap = new Map();
+                            this.games.forEach(g => mergedMap.set(g.id, g));
+                            importedGames.forEach(g => {
+                                if (g.id && g.title && g.code) mergedMap.set(g.id, g);
+                            });
+
+                            this.games = Array.from(mergedMap.values());
+                            this.saveLocalStorageGames();
+                            this.renderHero();
+                            this.renderGrid();
+
+                            if (!this.isOfflineMode && db) {
+                                const gamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'games');
+                                for (const g of importedGames) {
+                                    if (g.id && g.title && g.code) {
+                                        await setDoc(doc(gamesCol, g.id), g).catch(()=>{});
+                                    }
+                                }
+                            }
+
+                            this.showToast(`${importedGames.length} 件のゲームを正常に復元しました！`);
+                        } else {
+                            this.showToast('無効なバックアップファイルフォーマットです', 'error');
+                        }
+                    } catch (err) {
+                        this.showToast('JSONファイルの読み込みに失敗しました', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        // Initialize application on window ready
+        window.addEventListener('DOMContentLoaded', () => {
+            window.app = new RealtimeGameHub();
+        });
+    </script>
+</body>
+</html>
